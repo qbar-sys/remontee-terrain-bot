@@ -2,10 +2,17 @@
 // Bot Slack – Remontée terrain visites boutiques
 // Stack : Slack Bolt (Node.js) + API Notion
 // =============================================================================
+// Pour démarrer :
+//   npm install
+//   cp .env.example .env  →  remplir les variables
+//   node app.js
+// =============================================================================
 
 require("dotenv").config();
 const { App } = require("@slack/bolt");
 const { Client } = require("@notionhq/client");
+
+// ── Clients ──────────────────────────────────────────────────────────────────
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -15,15 +22,22 @@ const app = new App({
 });
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
+
 const NOTION_DB_ID = process.env.NOTION_DATABASE_ID;
 
+// ── État temporaire : associe un fil Slack à une page Notion ─────────────────
+// Structure : { [threadTs]: notionPageId }
 const pendingPhotos = new Map();
+
+// ── Liste des boutiques ───────────────────────────────────────────────────────
 
 const BOUTIQUES = [
   "Oberkampf", "Saint-Denis", "Saint-Ferdinand", "Pigalle", "Temple",
   "Rambuteau", "Sèvres", "Bac", "Lévis", "Neuilly", "Levallois", "Pompe",
   "Bordeaux Camille Jullian", "Bordeaux Grand-Hommes", "Lille Neuve", "Lille Basse",
 ];
+
+// ── Définition de la modal Block Kit ─────────────────────────────────────────
 
 function buildModal() {
   return {
@@ -33,6 +47,7 @@ function buildModal() {
     submit: { type: "plain_text", text: "Envoyer", emoji: true },
     close: { type: "plain_text", text: "Annuler", emoji: true },
     blocks: [
+      // ── Intro ──────────────────────────────────────────────────────────────
       {
         type: "section",
         text: {
@@ -40,6 +55,8 @@ function buildModal() {
           text: "📋 *Suivi des visites en boutique*\nMerci de fournir le plus de détails possible (aussi bien positifs que négatifs).",
         },
       },
+
+      // ── ⚠️ Avertissement qualité ──────────────────────────────────────────
       {
         type: "section",
         text: {
@@ -48,6 +65,8 @@ function buildModal() {
         },
       },
       { type: "divider" },
+
+      // ── Q1 : Qui suis-je ──────────────────────────────────────────────────
       {
         type: "input",
         block_id: "block_visiteur",
@@ -58,6 +77,8 @@ function buildModal() {
           placeholder: { type: "plain_text", text: "Votre prénom et nom" },
         },
       },
+
+      // ── Q2 : Boutique ─────────────────────────────────────────────────────
       {
         type: "input",
         block_id: "block_boutique",
@@ -72,6 +93,8 @@ function buildModal() {
           })),
         },
       },
+
+      // ── Q3 : Date ─────────────────────────────────────────────────────────
       {
         type: "input",
         block_id: "block_date",
@@ -82,6 +105,8 @@ function buildModal() {
           placeholder: { type: "plain_text", text: "Sélectionner une date" },
         },
       },
+
+      // ── Q4 : Heure ────────────────────────────────────────────────────────
       {
         type: "input",
         block_id: "block_heure",
@@ -93,6 +118,8 @@ function buildModal() {
         },
         hint: { type: "plain_text", text: "Format 24h : HH:MM" },
       },
+
+      // ── Q5 : Points positifs ──────────────────────────────────────────────
       {
         type: "input",
         block_id: "block_positifs",
@@ -108,6 +135,8 @@ function buildModal() {
           },
         },
       },
+
+      // ── Q6 : Points d'amélioration ────────────────────────────────────────
       {
         type: "input",
         block_id: "block_amelioration",
@@ -120,6 +149,8 @@ function buildModal() {
           placeholder: { type: "plain_text", text: "Ce qui peut être amélioré..." },
         },
       },
+
+      // ── Q7 : Autres commentaires ──────────────────────────────────────────
       {
         type: "input",
         block_id: "block_commentaires",
@@ -132,6 +163,8 @@ function buildModal() {
           placeholder: { type: "plain_text", text: "Tout autre retour..." },
         },
       },
+
+      // ── Note photos ───────────────────────────────────────────────────────
       {
         type: "context",
         elements: [
@@ -145,7 +178,10 @@ function buildModal() {
   };
 }
 
+// ── Message d'invitation dans le canal ───────────────────────────────────────
+
 function buildInviteMessage() {
+  const notionDbUrl = `https://www.notion.so/${NOTION_DB_ID.replace(/-/g, "")}`;
   return [
     {
       type: "section",
@@ -159,7 +195,7 @@ function buildInviteMessage() {
       elements: [
         {
           type: "mrkdwn",
-          text: "⚠️ Ce formulaire ne concerne pas les remontées qualité produit — utilisez le canal dédié pour celles-ci.",
+          text: `⚠️ Ce formulaire ne concerne pas les remontées qualité produit — utilisez le canal dédié pour celles-ci.\n📊 <${notionDbUrl}|Consulter l'historique des remontées terrain>`,
         },
       ],
     },
@@ -177,6 +213,8 @@ function buildInviteMessage() {
   ];
 }
 
+// ── Slash command /remontee ───────────────────────────────────────────────────
+
 app.command("/remontee", async ({ command, ack, client, logger }) => {
   await ack();
   try {
@@ -186,6 +224,8 @@ app.command("/remontee", async ({ command, ack, client, logger }) => {
   }
 });
 
+// ── Bouton « Remonter une visite » ────────────────────────────────────────────
+
 app.action("open_remontee_modal", async ({ ack, body, client, logger }) => {
   await ack();
   try {
@@ -194,6 +234,8 @@ app.action("open_remontee_modal", async ({ ack, body, client, logger }) => {
     logger.error(err);
   }
 });
+
+// ── Soumission de la modal ────────────────────────────────────────────────────
 
 app.view("remontee_terrain_submit", async ({ ack, body, view, client, logger }) => {
   await ack();
@@ -209,6 +251,7 @@ app.view("remontee_terrain_submit", async ({ ack, body, view, client, logger }) 
   const userId       = body.user.id;
 
   try {
+    // ── Création de l'entrée Notion ─────────────────────────────────────────
     const notionPage = await notion.pages.create({
       parent: { database_id: NOTION_DB_ID },
       properties: {
@@ -223,6 +266,7 @@ app.view("remontee_terrain_submit", async ({ ack, body, view, client, logger }) 
       },
     });
 
+    // ── DM de confirmation + ouverture du fil photos ────────────────────────
     const confirmMsg = await client.chat.postMessage({
       channel: userId,
       text: `✅ Remontée enregistrée pour ${boutique} le ${dateVisite} à ${heureVisite}.`,
@@ -248,46 +292,25 @@ app.view("remontee_terrain_submit", async ({ ack, body, view, client, logger }) 
       ],
     });
 
+    // Enregistrer l'association fil → page Notion (expire après 30 min)
     const threadTs = confirmMsg.ts;
     pendingPhotos.set(threadTs, notionPage.id);
     setTimeout(() => pendingPhotos.delete(threadTs), 30 * 60 * 1000);
 
+    // ── Post dans le canal de suivi ─────────────────────────────────────────
     if (process.env.SLACK_RECAP_CHANNEL) {
       await client.chat.postMessage({
         channel: process.env.SLACK_RECAP_CHANNEL,
-        text: `Nouvelle remontée terrain : ${boutique} — ${visiteur}`,
+        text: `Nouvelle remontée terrain réalisée à ${boutique} par ${visiteur}`,
         blocks: [
           {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `📍 *Nouvelle remontée terrain*\n\n*Boutique :* ${boutique}\n*Date :* ${dateVisite} à ${heureVisite}\n*Par :* <@${userId}> (${visiteur})`,
+              text: `📍 Nouvelle remontée terrain réalisée à *${boutique}* par *${visiteur}* le ${dateVisite} à ${heureVisite}.\n\n<${notionPage.url}|Pour en savoir plus →>`,
             },
           },
-          positifs && {
-            type: "section",
-            text: { type: "mrkdwn", text: `✅ *Points positifs :*\n${positifs}` },
-          },
-          amelioration && {
-            type: "section",
-            text: { type: "mrkdwn", text: `⚠️ *Points d'amélioration :*\n${amelioration}` },
-          },
-          commentaires && {
-            type: "section",
-            text: { type: "mrkdwn", text: `💬 *Autres commentaires :*\n${commentaires}` },
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: { type: "plain_text", text: "Voir dans Notion", emoji: true },
-                url: notionPage.url,
-                action_id: "view_notion",
-              },
-            ],
-          },
-        ].filter(Boolean),
+        ],
       });
     }
   } catch (err) {
@@ -299,8 +322,14 @@ app.view("remontee_terrain_submit", async ({ ack, body, view, client, logger }) 
   }
 });
 
+// ── Écoute des photos dans le fil de confirmation ─────────────────────────────
+// L'utilisateur répond dans le DM de confirmation avec une ou plusieurs photos.
+// Le bot met à jour l'entrée Notion avec les liens Slack de chaque fichier.
+
 app.event("message", async ({ event, client, logger }) => {
+  // On ne traite que les réponses dans un fil (thread_reply) contenant des fichiers
   if (!event.thread_ts || !event.files || event.files.length === 0) return;
+  // Ignorer les messages du bot lui-même
   if (event.bot_id) return;
 
   const notionPageId = pendingPhotos.get(event.thread_ts);
@@ -315,22 +344,25 @@ app.event("message", async ({ event, client, logger }) => {
           text: { content: f.name || "Photo", link: { url: f.permalink } },
         },
       ];
+      // Séparateur entre photos du même envoi
       if (i < event.files.length - 1) {
         entry.push({ type: "text", text: { content: "\n" } });
       }
       return entry;
     });
 
-    // Lire les photos existantes pour les conserver
+    // Lire les photos existantes pour les conserver (plusieurs envois successifs)
     const existingPage = await notion.pages.retrieve({ page_id: notionPageId });
     const existingRichText = existingPage.properties["Photos"]?.rich_text || [];
 
+    // Ajouter un saut de ligne entre les envois successifs
     const separator = existingRichText.length > 0
       ? [{ type: "text", text: { content: "\n" } }]
       : [];
 
     const allPhotos = [...existingRichText, ...separator, ...newPhotoRichText];
 
+    // Mise à jour de la page Notion
     await notion.pages.update({
       page_id: notionPageId,
       properties: {
@@ -349,6 +381,8 @@ app.event("message", async ({ event, client, logger }) => {
   }
 });
 
+// ── Commande pour poster le message d'invitation dans un canal ────────────────
+
 app.command("/remontee-invite", async ({ command, ack, client, logger }) => {
   await ack();
   try {
@@ -361,6 +395,8 @@ app.command("/remontee-invite", async ({ command, ack, client, logger }) => {
     logger.error(err);
   }
 });
+
+// ── Démarrage ─────────────────────────────────────────────────────────────────
 
 (async () => {
   await app.start();
