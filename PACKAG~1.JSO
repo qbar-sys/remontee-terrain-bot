@@ -1,0 +1,17 @@
+{
+  "name": "slack-terrain-bot",
+  "version": "1.0.0",
+  "description": "Bot Slack – Remontée terrain visites boutiques → Notion",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "@slack/bolt": "^3.19.0",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
