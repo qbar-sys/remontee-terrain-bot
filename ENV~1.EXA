@@ -1,0 +1,21 @@
+# ── Slack ─────────────────────────────────────────────────────────────────────
+# Token du bot  (xoxb-...)     → Settings > OAuth & Permissions
+SLACK_BOT_TOKEN=xoxb-...
+
+# Signing Secret               → Settings > Basic Information
+SLACK_SIGNING_SECRET=...
+
+# App-Level Token  (xapp-...)  → Settings > Basic Information > App-Level Tokens
+# Scopes requis : connections:write
+SLACK_APP_TOKEN=xapp-...
+
+# Canal où poster les récapitulatifs (ex: C01234ABCDE)
+# Laisser vide pour désactiver
+SLACK_RECAP_CHANNEL=
+
+# ── Notion ────────────────────────────────────────────────────────────────────
+# Integration Token            → notion.so/my-integrations
+NOTION_TOKEN=secret_...
+
+# ID de la base de données Notion (déjà créée)
+NOTION_DATABASE_ID=4658ac3e1bfe449eb3c039273f9ec094
