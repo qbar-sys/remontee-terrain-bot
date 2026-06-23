@@ -56,14 +56,6 @@ function buildModal() {
         },
       },
 
-      // ── ⚠️ Avertissement qualité ──────────────────────────────────────────
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: "⚠️  *Remontées qualité*\nCe formulaire ne concerne *pas* les problèmes qualité produit. Merci de les signaler exclusivement dans le canal dédié au suivi de la qualité.",
-        },
-      },
       { type: "divider" },
 
       // ── Q1 : Qui suis-je ──────────────────────────────────────────────────
