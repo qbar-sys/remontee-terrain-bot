@@ -52,7 +52,7 @@ function buildModal() {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: "📋 *Suivi des visites en boutique*\nMerci de fournir le plus de détails possible (aussi bien positifs que négatifs).",
+          text: "📋 *Suivi des visites en boutique*\nMerci de fournir le plus de détails possible (aussi bien positifs que négatifs).\n\n👉 <https://app.notion.com/p/thefrenchbastards/Comment-r-aliser-une-remont-e-terrain-388cf3a4784680e981d8f5d547c8256f|Liste des sujets à regarder lors d'un passage en boutique>",
         },
       },
 
