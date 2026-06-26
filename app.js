@@ -12,6 +12,16 @@ require("dotenv").config();
 const { App } = require("@slack/bolt");
 const { Client } = require("@notionhq/client");
 
+// ── Garde-fou : évite le crash sur déconnexion Slack pendant la connexion ────
+process.on("uncaughtException", (err) => {
+  if (err && err.message && err.message.includes("Unhandled event")) {
+    console.warn("⚠️ Transition Socket Mode ignorée (reconnexion auto):", err.message);
+    return; // on laisse Socket Mode se reconnecter au lieu de crasher
+  }
+  console.error("Erreur fatale non rattrapée:", err);
+  process.exit(1); // les vraies erreurs : on sort proprement
+});
+
 // ── Clients ──────────────────────────────────────────────────────────────────
 
 const app = new App({
