@@ -44,7 +44,7 @@ const pendingPhotos = new Map();
 const BOUTIQUES = [
   "Oberkampf", "Saint-Denis", "Saint-Ferdinand", "Pigalle", "Temple",
   "Rambuteau", "Sèvres", "Bac", "Lévis", "Neuilly", "Levallois", "Pompe",
-  "Bordeaux Camille Jullian", "Bordeaux Grand-Hommes", "Lille Neuve", "Lille Basse",
+  "Bordeaux Camille Jullian", "Bordeaux Dijeaux", "Bordeaux Grand-Hommes", "Lille Neuve", "Lille Basse",
 ];
 
 // ── Définition de la modal Block Kit ─────────────────────────────────────────
